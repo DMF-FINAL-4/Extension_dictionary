@@ -74,3 +74,24 @@ footer {
 input[type="checkbox"]:checked {
     accent-color: rgb(21, 167, 240); /* 체크박스의 색상을 초록색으로 변경 */
 }
+
+
+.definition-item {
+    cursor: pointer; /* 클릭 가능한 영역 표시 */
+}
+
+.definition-item.selected {
+    background-color: lightblue; /* 선택된 항목 배경 색 */
+}
+
+.definition-item span {
+    user-select: text; /* 텍스트 선택 가능하게 설정 */
+}
+.selected {
+    background-color: #add8e6;  /* 파란색 배경 */
+    border-radius: 5px;  /* 둥근 모서리 */
+}
+
+.selected input[type="checkbox"] {
+    background-color: #4c8bf5;  /* 파란색 체크박스 배경 */
+}
