@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="styles.css"> 
+
+</head>
+<body>
+    <h1 id="json-title"></h1>
+    <ul id="json-list"></ul>
+
+    <script>
+        // JSON 파일에서 데이터 불러오기
+        fetch('test.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // 제목 설정
+                document.getElementById('json-title').textContent = data.title;
+
+                // 리스트에 아이템 추가
+                const list = document.getElementById('json-list');
+                data.items.forEach(item => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = item;
+                    list.appendChild(listItem);
+                });
+            })
+            .catch(error => {
+                console.error('There was a problem with the fetch operation:', error);
+            });
+    </script>
+
+<hr>
+<footer>
+  <table style="margin: 0 auto;">
+    <tbody>
+        <tr>
+          <td id="select-all">전체 클릭</a></td>
+          <td id="delete-selected">삭제 하기</a></td>
+          <td id="bold-selected">중요 표시</a></td>
+          <td> <a href="./landing2.html">뒤로 가기</a></a></td>
+        </tr>
+    </tbody>
+</table>
+</footer>
+<!-- 
+<h2>현재 검색 단어</h2> -->
+
+<div>
+  <h2 id="definition-word"></h2>
+  <p id="definition-text"></p>
+</div>
+
+
+<p id="select-a-word"></p>
+<h3 id="definition-word"></h3>
+<p id="definition-text"></p>
+
+
+<script src="sidepanel.js"></script>
+<script src="service-worker.js"></script>
+
+
+
+
+<script src="sidepanel.js"></script>
+<script src="service-worker.js"></script>
+
+
+</body>
+</html>
+
+
+
