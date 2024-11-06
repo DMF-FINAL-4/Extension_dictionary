@@ -60,6 +60,7 @@ function displayDefinitions() {
                     </div>
                 </div>
             </div>
+            <hr style="border: 1px solid #ccc; margin: 10px 0;"> <!-- 추가된 hr 태그 -->
         `)
         .reverse()
         .join('');
