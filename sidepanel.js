@@ -46,7 +46,6 @@ function updateDefinition(word) {
     displayDefinitions();
 }
 
-// displayDefinitions 함수 내에서 체크박스를 숨김 처리
 function displayDefinitions() {
     const definitionElement = document.querySelector('#definition-text');
     const previousDefinitions = Object.entries(searchResult)
@@ -56,7 +55,6 @@ function displayDefinitions() {
                     <span style="font-weight: bold; margin-bottom: 2px;">${key}</span>
                     <div style="display: flex; align-items: center;">
                         <span style="max-width: calc(100% - 10px); overflow-wrap: break-word;">${value}</span>
-                        <input type="checkbox" id="${key}" name="definitions" value="${key}" style="margin-left: 10px; display: none;" onchange="updateCheckboxState('${key}', this.checked)">
                     </div>
                 </div>
             </div>
@@ -74,11 +72,8 @@ function displayDefinitions() {
             const value = div.getAttribute('data-value');
             handleClickOnDefinition(key, value);
 
-            // 클릭 시 div와 체크박스에 스타일 추가/제거
+            // 클릭 시 div에 스타일 추가/제거
             div.classList.toggle('selected');  // 'selected' 클래스 토글
-            const checkbox = div.querySelector('input[type="checkbox"]');
-            checkbox.checked = !checkbox.checked;
-            updateCheckboxState(key, checkbox.checked);
         });
     });
 }
@@ -89,53 +84,41 @@ function handleClickOnDefinition(key, value) {
     // 여기에 클릭된 정의에 대한 추가 작업을 추가할 수 있습니다
 }
 
-// 체크박스 상태 업데이트 함수 (기존 코드 활용)
-function updateCheckboxState(key, isChecked) {
-    console.log(`체크박스 - 키: ${key}, 상태: ${isChecked ? '체크됨' : '체크 해제'}`);
-    // 여기에 체크박스 상태에 따른 추가 작업을 추가할 수 있습니다
-}
-
 // 이벤트 핸들러 설정
-document.getElementById('select-all').onclick = selectAllCheckboxes;
+document.getElementById('select-all').onclick = selectAllDefinitions;
 document.getElementById('delete-selected').onclick = deleteSelectedDefinitions;
 
-let isAllChecked = false; // 전체 체크 상태를 추적하는 변수
+let isAllSelected = false; // 전체 선택 상태를 추적하는 변수
 
-// 모든 체크박스를 선택 또는 해제하는 함수
-function selectAllCheckboxes() {
-    const checkboxes = document.querySelectorAll('input[name="definitions"]');
+// 모든 정의를 선택 또는 해제하는 함수
+function selectAllDefinitions() {
     const definitionContainers = document.querySelectorAll('.definition-container');
-    
+
     // 전체 클릭 상태 토글
-    isAllChecked = !isAllChecked;
+    isAllSelected = !isAllSelected;
 
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = isAllChecked;
-    });
-
-    // div 클릭 상태를 'selected' 클래스를 통해 처리
     definitionContainers.forEach(div => {
-        if (isAllChecked) {
+        if (isAllSelected) {
             div.classList.add('selected');
         } else {
             div.classList.remove('selected');
         }
     });
 
-    console.log(isAllChecked ? '모든 체크박스가 선택되었습니다.' : '모든 체크박스가 해제되었습니다.');
+    console.log(isAllSelected ? '모든 정의가 선택되었습니다.' : '모든 정의가 해제되었습니다.');
 }
 
 // 선택된 정의를 삭제하는 함수
 function deleteSelectedDefinitions() {
-    const checkedKeys = Array.from(document.querySelectorAll('input[name="definitions"]:checked'))
-        .map(checkbox => checkbox.value);
+    const selectedKeys = Array.from(document.querySelectorAll('.definition-container.selected'))
+        .map(div => div.getAttribute('data-key'));
 
-    checkedKeys.forEach(key => {
+    selectedKeys.forEach(key => {
         delete searchResult[key.toLowerCase()];
     });
 
-    chrome.storage.local.remove(checkedKeys, () => {
-        console.log("로컬 스토리지에서 삭제된 항목:", checkedKeys);
+    chrome.storage.local.remove(selectedKeys, () => {
+        console.log("로컬 스토리지에서 삭제된 항목:", selectedKeys);
         displayDefinitions();
     });
 }
