@@ -1,11 +1,11 @@
 let searchResult = {};
+let searchOrder = [];
 
 // 패널이 열릴 때 저장된 데이터 불러오기
-chrome.storage.local.get(null, (data) => {
+chrome.storage.local.get(['searchResult', 'searchOrder'], (data) => {
     if (data) {
-        searchResult = Object.fromEntries(
-            Object.entries(data).filter(([key]) => key !== 'lastWord')
-        );
+        searchResult = data.searchResult || {};
+        searchOrder = data.searchOrder || [];
         console.log('검색 결과 복원:', searchResult);
         displayDefinitions(); // 페이지 로드 시 모든 이전 정의 표시
     }
@@ -22,10 +22,22 @@ chrome.storage.local.onChanged.addListener((changes) => {
 // 단어의 정의를 업데이트하는 함수
 function updateDefinitionWithFetch(word) {
     fetchEncyclopedia(word).then(() => {
-        // 최신 검색 결과를 searchResult의 맨 앞에 추가
-        searchResult = { [word.toLowerCase()]: searchResult[word.toLowerCase()], ...searchResult };
-        chrome.storage.local.set(searchResult, () => {
-            console.log("검색 결과 업데이트됨:", searchResult);
+        const lowerWord = word.toLowerCase();
+
+        // 새로운 단어는 맨 앞에 추가
+        if (!searchOrder.includes(lowerWord)) {
+            searchOrder.unshift(lowerWord); // 최신 단어를 맨 앞에 추가
+        } else {
+            // 이미 있던 단어라면 순서 변경
+            searchOrder = [lowerWord, ...searchOrder.filter(w => w !== lowerWord)];
+        }
+
+        // 검색 결과 저장 (단어와 정의)
+        searchResult[lowerWord] = searchResult[lowerWord] || `No definition found for ${lowerWord}`;
+
+        // 최신순으로 저장
+        chrome.storage.local.set({ searchResult, searchOrder }, () => {
+            console.log("검색 결과 및 순서 저장됨:", searchResult, searchOrder);
             displayDefinitions(); // 즉시 화면 갱신
         });
     });
@@ -34,12 +46,14 @@ function updateDefinitionWithFetch(word) {
 // 단어 정의를 화면에 표시하는 함수
 function displayDefinitions() {
     const definitionElement = document.querySelector('#definition-text');
-    const previousDefinitions = Object.entries(searchResult)
-        .map(([key, value]) => `
+    
+    // searchOrder 배열을 사용해 최신순으로 정렬
+    const previousDefinitions = searchOrder
+        .map(key => `
             <div class="definition-container" style="margin-bottom: 10px; display: flex; flex-direction: column;" data-key="${key}">
                 <span style="font-weight: bold; margin-bottom: 2px;">${key}</span>
                 <div class="definition-content" style="display: flex; align-items: center;">
-                    <span style="max-width: calc(100% - 10px); overflow-wrap: break-word;">${value}</span>
+                    <span style="max-width: calc(100% - 10px); overflow-wrap: break-word;">${searchResult[key]}</span>
                     <input type="checkbox" id="${key}" name="definitions" value="${key}" style="margin-left: 10px;">
                 </div>
             </div>
@@ -48,25 +62,10 @@ function displayDefinitions() {
         .join('');
 
     definitionElement.innerHTML = previousDefinitions || '검색된 결과가 없습니다.';
-
-    // 이벤트 핸들러 추가
-    document.querySelectorAll('.definition-container').forEach(container => {
-        const checkbox = container.querySelector('input[type="checkbox"]');
-        container.addEventListener('dblclick', () => {
-            const contentDiv = container.querySelector('.definition-content');
-            if (container.style.backgroundColor === 'rgb(173, 216, 230)') {
-                container.style.backgroundColor = ''; // 배경색 초기화
-                if (!contentDiv.contains(checkbox)) {
-                    contentDiv.appendChild(checkbox); // 체크박스 복구
-                }
-            } else {
-                container.style.backgroundColor = '#add8e6'; // 더 진한 파랑색
-                if (checkbox) checkbox.remove(); // 체크박스 제거
-            }
-        });
-    });
-
 }
+
+// 나머지 함수 (선택 및 삭제 기능)는 기존 코드 그대로 유지
+
 document.getElementById('select-all').onclick = selectAllCheckboxes;
 document.getElementById('delete-selected').onclick = deleteSelectedDefinitions;
 
@@ -88,10 +87,14 @@ function deleteSelectedDefinitions() {
         .map(checkbox => checkbox.value);
     checkedKeys.forEach(key => {
         delete searchResult[key.toLowerCase()];
+        const index = searchOrder.indexOf(key.toLowerCase());
+        if (index !== -1) searchOrder.splice(index, 1); // 순서에서도 삭제
     });
     chrome.storage.local.remove(checkedKeys, () => {
         console.log("로컬 스토리지에서 삭제된 항목:", checkedKeys);
-        displayDefinitions();
+        chrome.storage.local.set({ searchResult, searchOrder }, () => {
+            displayDefinitions(); // 즉시 화면 갱신
+        });
     });
 }
 
