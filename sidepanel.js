@@ -19,42 +19,18 @@ chrome.storage.local.onChanged.addListener((changes) => {
     }
 });
 
-// 단어의 정의를 업데이트하는 함수
-function updateDefinitionWithFetch(word) {
-    fetchEncyclopedia(word).then(() => {
-        const lowerWord = word.toLowerCase();
-
-        // 새로운 단어는 맨 앞에 추가
-        if (!searchOrder.includes(lowerWord)) {
-            searchOrder.unshift(lowerWord); // 최신 단어를 맨 앞에 추가
-        } else {
-            // 이미 있던 단어라면 순서 변경
-            searchOrder = [lowerWord, ...searchOrder.filter(w => w !== lowerWord)];
-        }
-
-        // 검색 결과 저장 (단어와 정의)
-        searchResult[lowerWord] = searchResult[lowerWord] || `No definition found for ${lowerWord}`;
-
-        // 최신순으로 저장
-        chrome.storage.local.set({ searchResult, searchOrder }, () => {
-            console.log("검색 결과 및 순서 저장됨:", searchResult, searchOrder);
-            displayDefinitions(); // 즉시 화면 갱신
-        });
-    });
-}
-
-// 단어 정의를 화면에 표시하는 함수
+// 단어 정의를 표시하는 함수
+// 단어 정의를 표시하는 함수
 function displayDefinitions() {
     const definitionElement = document.querySelector('#definition-text');
-    
-    // searchOrder 배열을 사용해 최신순으로 정렬
     const previousDefinitions = searchOrder
         .map(key => `
-            <div class="definition-container" style="margin-bottom: 10px; display: flex; flex-direction: column;" data-key="${key}">
+            <div class="definition-container" style="margin-bottom: 10px; display: flex; flex-direction: column;" data-key="${key}" 
+                style="background-color: ${searchResult[key].backgroundColor}">
                 <span style="font-weight: bold; margin-bottom: 2px;">${key}</span>
                 <div class="definition-content" style="display: flex; align-items: center;">
-                    <span style="max-width: calc(100% - 10px); overflow-wrap: break-word;">${searchResult[key]}</span>
-                    <input type="checkbox" id="${key}" name="definitions" value="${key}" style="margin-left: 10px;">
+                    <span style="max-width: calc(100% - 10px); overflow-wrap: break-word;">${searchResult[key].definition}</span>
+                    <input type="checkbox" id="${key}" name="definitions" value="${key}" style="margin-left: 10px;" ${searchResult[key].checked ? 'checked' : ''}>
                 </div>
             </div>
             <hr style="border: 1px solid #ccc; margin: 10px 0;">
@@ -62,7 +38,49 @@ function displayDefinitions() {
         .join('');
 
     definitionElement.innerHTML = previousDefinitions || '검색된 결과가 없습니다.';
+
+    // 이벤트 핸들러 추가
+    document.querySelectorAll('.definition-container').forEach(container => {
+        const key = container.getAttribute('data-key');
+        const checkbox = container.querySelector('input[type="checkbox"]');
+        
+        // 배경색 상태와 체크 상태 복원
+        if (searchResult[key]) {
+            container.style.backgroundColor = searchResult[key].backgroundColor;
+            checkbox.checked = searchResult[key].checked;
+        }
+
+        // 더블클릭 시 배경색 및 체크박스 상태 업데이트
+        container.addEventListener('dblclick', () => {
+            const contentDiv = container.querySelector('.definition-content');
+            if (container.style.backgroundColor === 'rgb(173, 216, 230)') {
+                container.style.backgroundColor = ''; // 배경색 초기화
+                // 체크박스를 다시 추가
+                if (!contentDiv.contains(checkbox)) {
+                    contentDiv.appendChild(checkbox); // 체크박스 복원
+                }
+                searchResult[key].backgroundColor = ''; // 로컬 스토리지에 상태 저장
+            } else {
+                container.style.backgroundColor = '#add8e6'; // 더 진한 파랑색
+                // 체크박스를 제거
+                if (contentDiv.contains(checkbox)) {
+                    checkbox.remove(); // 체크박스 제거
+                }
+                searchResult[key].backgroundColor = '#add8e6'; // 로컬 스토리지에 상태 저장
+            }
+            // 로컬 스토리지에 배경색 상태 저장
+            chrome.storage.local.set({ searchResult, searchOrder });
+        });
+
+        // 체크박스 상태 변경 시 저장
+        checkbox.addEventListener('change', () => {
+            searchResult[key].checked = checkbox.checked; // 체크박스 상태 저장
+            chrome.storage.local.set({ searchResult, searchOrder });
+        });
+    });
 }
+
+
 
 // 나머지 함수 (선택 및 삭제 기능)는 기존 코드 그대로 유지
 
@@ -118,7 +136,7 @@ async function fetchEncyclopedia(lastWord) {
             const items = jsonData.items || [];
             items.forEach(item => {
                 const description = item.description.replace(/<b>/g, '').replace(/<\/b>/g, '');
-                searchResult[lastWord.toLowerCase()] = description;
+                searchResult[lastWord.toLowerCase()] = { definition: description, checked: false, backgroundColor: '' };
             });
             await chrome.storage.local.set(searchResult);
             console.log("검색 결과 저장됨:", searchResult);
